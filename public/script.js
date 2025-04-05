@@ -1,4 +1,5 @@
-const socket = io(); // Conexión al servidor Socket.IO
+//const socket = io(); // Conexión al servidor Socket.IO
+const socket = io("https://tu-app.onrender.com");
 const localVideo = document.getElementById('local-video');
 const remoteVideo = document.getElementById('remote-video');
 let localStream;
