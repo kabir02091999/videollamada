@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Videollamada con Socket.IO y WebRTC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Videollamada</h1>
+  <div>
+    <input type="text" id="roomId" placeholder="ID de la sala">
+    <button onclick="joinRoom()">Unirse</button>
+  </div>
+  <div class="videos">
+    <video id="local-video" autoplay muted></video>
+    <video id="remote-video" autoplay></video>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
