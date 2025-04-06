@@ -1,5 +1,5 @@
 //const socket = io(); // Conexión al servidor Socket.IO
-const socket = io("https://tu-app.onrender.com");
+const socket = io('http://localhost:3000');
 const localVideo = document.getElementById('local-video');
 const remoteVideo = document.getElementById('remote-video');
 let localStream;
@@ -25,10 +25,33 @@ async function startVideo() {
 }
 
 // Configurar WebRTC
-socket.on('user-connected', (userId) => {
+/* socket.on('user-connected', (userId) => {
   console.log(`Nuevo usuario conectado: ${userId}`);
   createPeerConnection(userId);
-});
+}); */
+socket.on('user-connected', async (userId) => {
+    console.log(`Nuevo usuario conectado: ${userId}`);
+    if (!localStream) {
+      console.log('Esperando a que el stream local esté listo antes de crear peerConnection');
+      // Podrías usar una promesa o un estado para saber cuándo localStream está listo
+      // y luego llamar a createPeerConnection(userId);
+      const streamReady = new Promise(resolve => {
+        if (localStream) {
+          resolve();
+        } else {
+          const checkInterval = setInterval(() => {
+            if (localStream) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100); // Verificar cada 100ms
+        }
+      });
+      await streamReady;
+    }
+    createPeerConnection(userId);
+  });
+
 
 function createPeerConnection(userId) {
   // Configurar la conexión Peer-to-Peer (WebRTC)
@@ -69,6 +92,12 @@ function createPeerConnection(userId) {
 
 // Manejar señales de WebRTC (Ofertas/Respuestas)
 socket.on('signal', (data) => {
+  // Asegurarse de que peerConnection esté inicializado antes de usarlo
+  if (!peerConnection) {
+    console.warn('Recibida señal pero peerConnection no está inicializado:', data);
+    return;
+  }
+
   if (data.signal.type === 'offer') {
     handleOffer(data.senderId, data.signal.offer);
   } else if (data.signal.type === 'answer') {
@@ -79,6 +108,11 @@ socket.on('signal', (data) => {
 });
 
 async function handleOffer(senderId, offer) {
+  // Asegurarse de que peerConnection esté inicializado antes de usarlo
+  if (!peerConnection) {
+    console.warn('Recibida oferta pero peerConnection no está inicializado.');
+    return;
+  }
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
