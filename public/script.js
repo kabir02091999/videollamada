@@ -229,30 +229,33 @@ socket.on('user-connected', async (userId) => {
     }
 });
 
-socket.on('receive-signal', async data => {
-    console.log('Señal recibida de:', data.sender);
-    if (!peerConnection) {
-        createPeerConnection();
-    }
-
+socket.on('signal', async (data) => {
     if (data.signal.type === 'offer') {
-        console.log('Recibida oferta:', data.signal);
+      console.log('Recibida oferta:', data.signal);
+      try {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         socket.emit('send-signal', { signal: { type: 'answer', sdp: answer.sdp }, target: data.sender });
+      } catch (error) {
+        console.error('Error al procesar la oferta:', error);
+      }
     } else if (data.signal.type === 'answer') {
-        console.log('Recibida respuesta:', data.signal);
+      console.log('Recibida respuesta:', data.signal);
+      try {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+      } catch (error) {
+        console.error('Error al procesar la respuesta:', error);
+      }
     } else if (data.signal.type === 'candidate') {
-        console.log('Recibido candidato:', data.signal);
-        try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
-        } catch (error) {
-            console.error('Error al agregar el candidato ICE:', error);
-        }
+      console.log('Recibido candidato:', data.signal);
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+      } catch (error) {
+        console.error('Error al agregar el candidato ICE:', error);
+      }
     }
-});
+  });
 
 socket.on('user-disconnected', (userId) => {
     console.log('Usuario desconectado:', userId);
