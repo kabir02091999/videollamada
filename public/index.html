@@ -1,21 +1,29 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Videollamada con Socket.IO y WebRTC</title>
-  <link rel="stylesheet" href="style.css">
+    <title>Videollamada Simple</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #videos { display: flex; gap: 20px; margin-top: 20px; }
+        video { width: 320px; height: 240px; border: 1px solid black; }
+        #controls { margin-top: 20px; display: flex; gap: 10px; }
+    </style>
 </head>
 <body>
-  <h1>Videollamada</h1>
-  <div>
-    <input type="text" id="roomId" placeholder="ID de la sala">
-    <button onclick="joinRoom()">Unirse</button>
-  </div>
-  <div class="videos">
-    <video id="local-video" autoplay muted></video>
-    <video id="remote-video" autoplay></video>
-  </div>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+    <h1>Videollamada Simple</h1>
+
+    <div id="controls">
+        <input type="text" id="roomIdInput" placeholder="ID de la sala">
+        <button onclick="joinRoom()">Unirse a Sala</button>
+        <button onclick="createRoom()">Crear Sala</button>
+    </div>
+
+    <div id="videos">
+        <div><video id="localVideo" autoplay muted></video><label>Tú</label></div>
+        <div><video id="remoteVideo" autoplay></video><label>Otro Usuario</label></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

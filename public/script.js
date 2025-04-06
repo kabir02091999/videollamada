@@ -1,5 +1,5 @@
 //const socket = io(); // Conexión al servidor Socket.IO
-const socket = io('http://localhost:3000');
+/*const socket = io('http://localhost:3000');
 const localVideo = document.getElementById('local-video');
 const remoteVideo = document.getElementById('remote-video');
 let localStream;
@@ -25,10 +25,10 @@ async function startVideo() {
 }
 
 // Configurar WebRTC
-/* socket.on('user-connected', (userId) => {
+// socket.on('user-connected', (userId) => {
   console.log(`Nuevo usuario conectado: ${userId}`);
   createPeerConnection(userId);
-}); */
+}); 
 socket.on('user-connected', async (userId) => {
     console.log(`Nuevo usuario conectado: ${userId}`);
     if (!localStream) {
@@ -126,4 +126,141 @@ async function handleOffer(senderId, offer) {
 socket.on('user-disconnected', (userId) => {
   console.log(`Usuario desconectado: ${userId}`);
   if (peerConnection) peerConnection.close();
+});*/
+
+const socket = io();
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
+const roomIdInput = document.getElementById('roomIdInput');
+
+let localStream;
+let remoteStream;
+let peerConnection;
+let roomId;
+
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+    ]
+};
+
+async function startVideo() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+    } catch (error) {
+        console.error('Error al acceder a la cámara:', error);
+    }
+}
+
+function createPeerConnection() {
+    peerConnection = new RTCPeerConnection(iceServers);
+
+    peerConnection.onicecandidate = handleIceCandidate;
+    peerConnection.ontrack = handleTrackEvent;
+    peerConnection.onnegotiationneeded = handleNegotiationNeeded;
+
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+}
+
+async function handleNegotiationNeeded() {
+    try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('send-signal', { signal: { type: 'offer', sdp: offer.sdp }, target: roomId });
+    } catch (error) {
+        console.error('Error al crear la oferta:', error);
+    }
+}
+
+function handleIceCandidate(event) {
+    if (event.candidate) {
+        socket.emit('send-signal', { signal: { type: 'candidate', candidate: event.candidate }, target: roomId });
+    }
+}
+
+function handleTrackEvent(event) {
+    if (event.streams && event.streams[0] && event.track.kind === 'video') {
+        remoteVideo.srcObject = event.streams[0];
+    }
+}
+
+function createRoom() {
+    startVideo();
+    socket.emit('create-room');
+}
+
+function joinRoom() {
+    roomId = roomIdInput.value;
+    if (roomId) {
+        startVideo();
+        socket.emit('join-room', roomId);
+    } else {
+        alert('Por favor, ingresa el ID de la sala.');
+    }
+}
+
+socket.on('room-created', (newRoomId) => {
+    roomId = newRoomId;
+    console.log(`Sala creada con ID: ${roomId}`);
 });
+
+socket.on('joined-room', (joinedRoomId) => {
+    roomId = joinedRoomId;
+    createPeerConnection();
+    console.log(`Te uniste a la sala: ${roomId}`);
+});
+
+socket.on('room-full', () => {
+    alert('La sala está llena.');
+});
+
+socket.on('user-connected', async (userId) => {
+    console.log('Usuario conectado:', userId);
+    createPeerConnection();
+    try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('send-signal', { signal: { type: 'offer', sdp: offer.sdp }, target: roomId });
+    } catch (error) {
+        console.error('Error al crear la oferta:', error);
+    }
+});
+
+socket.on('receive-signal', async data => {
+    console.log('Señal recibida de:', data.sender);
+    if (!peerConnection) {
+        createPeerConnection();
+    }
+
+    if (data.signal.type === 'offer') {
+        console.log('Recibida oferta:', data.signal);
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('send-signal', { signal: { type: 'answer', sdp: answer.sdp }, target: data.sender });
+    } else if (data.signal.type === 'answer') {
+        console.log('Recibida respuesta:', data.signal);
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+    } else if (data.signal.type === 'candidate') {
+        console.log('Recibido candidato:', data.signal);
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+        } catch (error) {
+            console.error('Error al agregar el candidato ICE:', error);
+        }
+    }
+});
+
+socket.on('user-disconnected', (userId) => {
+    console.log('Usuario desconectado:', userId);
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    remoteVideo.srcObject = null;
+});
+
+startVideo(); 
